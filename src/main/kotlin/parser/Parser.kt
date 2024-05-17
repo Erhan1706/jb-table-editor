@@ -55,7 +55,6 @@ class Parser(private val table: JTable) {
                 lastElement = c
             }
         }
-        //println(res.toString())
         return res.toString()
     }
 
