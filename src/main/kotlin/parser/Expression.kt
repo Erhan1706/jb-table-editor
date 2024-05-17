@@ -1,4 +1,3 @@
 package parser
 
-class Expression {
-}
+sealed class Expression
