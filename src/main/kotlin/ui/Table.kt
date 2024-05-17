@@ -1,6 +1,6 @@
 package ui
 
-import Parser
+import parser.Parser
 import java.awt.event.ActionEvent
 import javax.swing.AbstractAction
 import javax.swing.JComponent

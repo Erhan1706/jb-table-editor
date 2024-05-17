@@ -1,11 +1,8 @@
 package ui
 
-import Parser
 import java.awt.BorderLayout
-import java.awt.Dimension
-import java.awt.GridLayout
-import javax.swing.*
-import javax.swing.table.DefaultTableModel
+import javax.swing.JFrame
+import javax.swing.JScrollPane
 
 class MainFrame: JFrame() {
 
