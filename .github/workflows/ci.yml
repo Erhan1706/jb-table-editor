@@ -36,7 +36,7 @@ jobs:
         run: sudo apt-get install -y kotlin
 
       - name: Compile Kotlin files
-        run: kotlinc -cp . -d out src/**/*.kt  
+        run:  kotlinc -cp "libs/junit-4.12.jar:libs/hamcrest-core-1.3.jar" -d out src
           
       - name: Run tests
         run: java -cp out org.junit.runner.JUnitCore parser.ParserTest
