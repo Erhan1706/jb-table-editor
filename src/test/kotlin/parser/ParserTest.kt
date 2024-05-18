@@ -13,7 +13,7 @@ class ParserTest {
         var expected = "1+~3"
         var input = "1+-+3"
         assertEquals(expected, parser.transformUnaryMinus(input))
-        expected = "~(~3/2)"
+        expected = "~ (~3 / 2)"
         input = "- (-3 / 2)"
         assertEquals(expected, parser.transformUnaryMinus(input))
     }

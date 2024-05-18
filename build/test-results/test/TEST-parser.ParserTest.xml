@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="parser.ParserTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2024-05-18T15:32:34" hostname="LAPTOP-6JJBOJLP" time="0.118">
+  <properties/>
+  <testcase name="transformUnitaryOperatorsTest" classname="parser.ParserTest" time="0.103"/>
+  <testcase name="transformUnitaryOperatorsTestNoUnary" classname="parser.ParserTest" time="0.001"/>
+  <testcase name="infixToPrefixTest" classname="parser.ParserTest" time="0.014"/>
+  <system-out><![CDATA[[-, 2, +, 3, 1]
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
