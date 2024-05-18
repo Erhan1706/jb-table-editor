@@ -1,10 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="parser.ParserTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2024-05-18T15:32:34" hostname="LAPTOP-6JJBOJLP" time="0.118">
+<testsuite name="parser.ParserTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2024-05-18T20:27:35" hostname="LAPTOP-6JJBOJLP" time="0.182">
   <properties/>
-  <testcase name="transformUnitaryOperatorsTest" classname="parser.ParserTest" time="0.103"/>
-  <testcase name="transformUnitaryOperatorsTestNoUnary" classname="parser.ParserTest" time="0.001"/>
-  <testcase name="infixToPrefixTest" classname="parser.ParserTest" time="0.014"/>
-  <system-out><![CDATA[[-, 2, +, 3, 1]
+  <testcase name="infixToPrefixTestSimple" classname="parser.ParserTest" time="0.158"/>
+  <testcase name="infixToPrefixTestNamedFunctions" classname="parser.ParserTest" time="0.008"/>
+  <testcase name="handleUnaryOperatorsTest" classname="parser.ParserTest" time="0.001"/>
+  <testcase name="generateASTTest" classname="parser.ParserTest" time="0.002"/>
+  <testcase name="parseCellComplex" classname="parser.ParserTest" time="0.007"/>
+  <testcase name="infixToPrefixTestPriority" classname="parser.ParserTest" time="0.002"/>
+  <testcase name="calculateReferencesTest" classname="parser.ParserTest" time="0.0"/>
+  <testcase name="preprocessNamedFunctionsTest" classname="parser.ParserTest" time="0.001"/>
+  <testcase name="handleUnaryOperatorsTestNoUnary" classname="parser.ParserTest" time="0.0"/>
+  <testcase name="parseASTTest" classname="parser.ParserTest" time="0.0"/>
+  <testcase name="parseCellTestSimple" classname="parser.ParserTest" time="0.001"/>
+  <testcase name="mapCoordinatesToTableCell" classname="parser.ParserTest" time="0.0"/>
+  <testcase name="infixToPrefixMultiDigit" classname="parser.ParserTest" time="0.001"/>
+  <testcase name="parseCellTestReferences" classname="parser.ParserTest" time="0.0"/>
+  <system-out><![CDATA[[+, -, 2, 3, 1]
+[+, 1, /, 2, 5]
+[pow, 2, 3]
+[/, pow, 3, +, 5, 2, pow, +, 2, 2, 3]
+[/, 16, 8]
+[-, -, 8, 5, 1]
+[*, pow, ~, 2, -, 2.0, 3, +, 42, 2.0]
+[+, *, 2, 3, 1]
+[*, 2, +, 3, 1]
+[1]
+[3]
+[+, 1, 3]
+[+, -, 20, 31, 10]
+[1]
+[3]
+[+, 1.0, 3.0]
 ]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>
