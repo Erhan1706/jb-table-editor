@@ -12,22 +12,22 @@ class ParserTest {
     fun transformUnitaryOperatorsTest() {
         var expected = "1+~3"
         var input = "1+-+3"
-        assertEquals(expected, parser.transformUnaryOperators(input))
+        assertEquals(expected, parser.transformUnaryMinus(input))
         expected = "~(~3/2)"
         input = "- (-3 / 2)"
-        assertEquals(expected, parser.transformUnaryOperators(input))
+        assertEquals(expected, parser.transformUnaryMinus(input))
     }
 
     @Test
     fun transformUnitaryOperatorsTestNoUnary() {
         val input = "(1+3)*3+2-1"
-        assertEquals(input, parser.transformUnaryOperators(input))
+        assertEquals(input, parser.transformUnaryMinus(input))
     }
 
     @Test
     fun infixToPrefixTest() {
         val input = "1+3-2"
         val expected = listOf<String>("-","2","+","3","1")
-        assertEquals(expected, parser.infixToPrefix(input))
+        assertEquals(expected, parser.infixToPrefixTokenize(input))
     }
 }

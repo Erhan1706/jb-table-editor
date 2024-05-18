@@ -2,33 +2,41 @@ package parser
 
 import java.lang.StringBuilder
 import javax.swing.JTable
+import kotlin.math.pow
 
 class Parser(private val table: JTable) {
 
-    fun parseCell(selectedRow: Int, selectedCol: Int) {
-        var cur = table.model.getValueAt(selectedRow, selectedCol)
-        cur = transformUnaryOperators(cur.toString())
-        if (cur.isEmpty()) return
-        cur = infixToPrefix(cur.reversed())
-        val (result, _) = syntaxTransform(cur, 0)
-
-        table.model.setValueAt(prefixParser(result), selectedRow, selectedCol)
-        println(prefixParser(result))
+    fun parseCell(selectedRow: Int, selectedCol: Int): Double {
+        var formula = calculateReferences(table.model.getValueAt(selectedRow, selectedCol).toString())
+        formula = removeSpaces(formula)
+        formula = transformUnaryMinus(formula)
+        if (formula.isEmpty()) return 0.0
+        val tokenizedFormula = tokenizeFormula(formula)
+        val cur = infixToPrefixTokenize(tokenizedFormula.reversed())
+        val (ast, _) = generateAST(cur, 0)
+        val result = parseAST(ast)
+        table.model.setValueAt(result, selectedRow, selectedCol)
+        // println(parseAST(ast))
+        return result
     }
 
-    fun isOperand(c: Char): Boolean {
+    private fun removeSpaces(formula: String): String {
+        return formula.filter { !it.isWhitespace() }
+    }
+
+    private fun isOperand(c: Char): Boolean {
         return setOf<Char>('+', '-', '*', '/', '~').contains(c)
     }
 
-    fun isOperandString(s: String): Boolean {
+    private fun isOperandString(s: String): Boolean {
         return setOf<String>("+", "-", "*", "/", "~").contains(s)
     }
 
-    fun isNumber(c: Char): Boolean {
+    private fun isNumber(c: Char): Boolean {
        return ('0'..'9').toSet().contains(c) || c == '.' // for decimal support
     }
 
-    fun isNumberString(s: String): Boolean {
+    private fun isNumberString(s: String): Boolean {
         if (s.isEmpty()) return false
         for (char in s) {
             if (!isNumber(char)) return false
@@ -36,11 +44,30 @@ class Parser(private val table: JTable) {
         return true
     }
 
-    fun transformUnaryOperators(formula: String): String {
+    private fun isNamedFunction(s: String): Boolean {
+        return setOf<String>("pow", "sqrt").contains(s)
+    }
+
+    fun mapCoordinatesToTableCell(coord: String): Pair<Int, Int> {
+        val row = coord.substring(1).toInt() - 1
+        val col = coord[0] - 'A' + 1
+        return Pair(row, col)
+    }
+
+    fun calculateReferences(formula: String): String  {
+        // Define the regular expression pattern to match an uppercase letter followed by one or more digits
+        val pattern = Regex("([A-Z])(\\d+)")
+        val result = pattern.replace(formula) { coord ->
+            val (row, col) = mapCoordinatesToTableCell(coord.value)
+            parseCell(row, col).toString()
+        }
+        return result
+    }
+
+    fun transformUnaryMinus(formula: String): String {
         var lastElement: Char = ' '
         var res: StringBuilder = StringBuilder()
-        val strippedFormula = formula.filter { !it.isWhitespace() }
-        for (c in strippedFormula) {
+        for (c in formula) {
             if (res.isEmpty() && c == '-') {
                 res.append('~')
                 lastElement = '~'
@@ -58,48 +85,100 @@ class Parser(private val table: JTable) {
         return res.toString()
     }
 
+    fun tokenizeFormula(formula: String): String {
+        val res = StringBuilder()
+        var i = 0
+        while (i < formula.length) {
+            var cur: Char = formula[i]
+            if (!cur.isLetter()) {
+                res.append(cur)
+                i++
+            }
+            val str = StringBuilder()
+            while (cur.isLetter()) {
+                str.append(cur)
+                cur = formula[++i]
+            }
+            if (isNamedFunction(str.toString()) && cur == '(') {
+                i++
+                res.append('(')
+                while (formula[i] != ',') {
+                    res.append(formula[i])
+                    i++
+                }
+                res.append(')')
+                res.append(str)
+                res.append('(')
+                i++
+                while (formula[i] != ')') {
+                    res.append(formula[i])
+                    i++
+                }
+                res.append(')')
+                i++
+            }
+        }
+        return res.toString()
+    }
 
-    fun infixToPrefix(formula: String): List<String> {
-        var res = ArrayList<String>()
+    fun infixToPrefixTokenize(formula: String): List<String> {
+        val res = ArrayList<String>()
         // The ~ character is used to represent the unitary - sign
-        val operandsPrio: Map<Char, Int> = mapOf('+' to 1, '-' to 1, '*' to 2, '/' to 2, '~' to 3)
-        var stack: ArrayDeque<Char> = ArrayDeque()
+        val operandsPrio: Map<String, Int> = mapOf("+" to 1, "-" to 1, "*" to 2, "/" to 2, "~" to 4, "pow" to 3)
+        val stack: ArrayDeque<String> = ArrayDeque()
 
         var i = 0
         while (i < formula.length) {
-            var cur = formula[i]
-            if (cur.isWhitespace()) {
-                i++
-                continue
-            }
-            else if (isNumber(cur)) {
-                val number = StringBuilder()
-                while (i < formula.length && isNumber(formula[i])) {
-                    number.insert(0, formula[i])
+            val cur = formula[i]
+            when {
+                cur.isWhitespace() -> {
                     i++
                 }
-                res.add(number.toString())
-                continue
-            }
-            else if (cur == ')') {
-                stack.addLast(')')
-            } else if (cur == '(') {
-                while (stack.last() != ')') {
-                    res.add(stack.removeLast().toString())
-                }
-                stack.removeLast()
-            } else if (isOperand(cur)) {
-                if (stack.isEmpty()) {
-                    // If the first element is a - operator then it's unary
-                    stack.addLast(cur)
-                    i++
+                isNumber(cur) -> {
+                    val number = StringBuilder()
+                    while (i < formula.length && isNumber(formula[i])) {
+                        number.insert(0, formula[i])
+                        i++
+                    }
+                    res.add(number.toString())
                     continue
                 }
-                val last = stack.last()
-                if ((operandsPrio[last] ?: 0) >= (operandsPrio[cur] ?: 0)) {
-                    res.add(stack.removeLast().toString())
-                    stack.addLast(cur)
-                } else stack.addLast(cur)
+                cur == ')' -> {
+                    stack.addLast(")")
+                }
+                cur == '(' -> {
+                    while (stack.last() != ")") {
+                        res.add(stack.removeLast())
+                    }
+                    stack.removeLast()
+                }
+                isOperand(cur) -> {
+                    if (stack.isEmpty() || stack.last() == "(") {
+                        stack.addLast(cur.toString())
+                    } else {
+                        val last = stack.last()
+                        if ((operandsPrio[last] ?: 0) >= (operandsPrio[cur.toString()] ?: 0)) {
+                            res.add(stack.removeLast())
+                        }
+                        stack.addLast(cur.toString())
+                    }
+                }
+                else -> {
+                    val str = StringBuilder()
+                    while (i < formula.length && formula[i].isLetter()) {
+                        str.append(formula[i])
+                        i++
+                    }
+                    val strName = str.reversed().toString()
+                    if (isNamedFunction(strName)) {
+                        val last = stack.lastOrNull()
+                        if ((operandsPrio[last] ?: 0) >= (operandsPrio[strName] ?: 0)) {
+                            res.add(stack.removeLast())
+                        }
+                        stack.addLast(strName)
+                    }
+                    continue
+                }
             }
             i++
         }
@@ -111,59 +190,67 @@ class Parser(private val table: JTable) {
         return res.reversed()
     }
 
-    fun syntaxTransform(prefix: List<String>, index: Int): Pair<Expression, Int> {
-        var cur: String = prefix[index]
+    fun generateAST(prefix: List<String>, index: Int): Pair<Expression, Int> {
+        val cur: String = prefix[index]
         if (isNumberString(cur)) {
             return Pair(NumberExpr(cur.toDouble()), index + 1)
         } else if (isOperandString(cur)) {
             when (cur) {
                 "+" -> {
-                    val (left, nextIndex) = syntaxTransform(prefix, index + 1)
-                    val (right, finalIndex) = syntaxTransform(prefix, nextIndex)
+                    val (left, nextIndex) = generateAST(prefix, index + 1)
+                    val (right, finalIndex) = generateAST(prefix, nextIndex)
                     return Pair(BinOp('+', left, right), finalIndex)
                 }
                 "-" -> {
-                    val (left, nextIndex) = syntaxTransform(prefix, index + 1)
-                    val (right, finalIndex) = syntaxTransform(prefix, nextIndex)
+                    val (left, nextIndex) = generateAST(prefix, index + 1)
+                    val (right, finalIndex) = generateAST(prefix, nextIndex)
                     return Pair(BinOp('-', left, right), finalIndex)
                 }
                 "*" -> {
-                    val (left, nextIndex) = syntaxTransform(prefix, index + 1)
-                    val (right, finalIndex) = syntaxTransform(prefix, nextIndex)
+                    val (left, nextIndex) = generateAST(prefix, index + 1)
+                    val (right, finalIndex) = generateAST(prefix, nextIndex)
                     return Pair(BinOp('*', left, right), finalIndex)
                 }
                 "/" -> {
-                    val (left, nextIndex) = syntaxTransform(prefix, index + 1)
-                    val (right, finalIndex) = syntaxTransform(prefix, nextIndex)
+                    val (left, nextIndex) = generateAST(prefix, index + 1)
+                    val (right, finalIndex) = generateAST(prefix, nextIndex)
                     return Pair(BinOp('/', left, right), finalIndex)
                 }
                 "~" -> {
-                    val (operand, nextIndex) = syntaxTransform(prefix, index + 1)
+                    val (operand, nextIndex) = generateAST(prefix, index + 1)
                     return Pair(UnOp('-', operand), nextIndex)
                 }
                 else -> throw IllegalArgumentException("Unknown operator")
+            }
+        } else if (isNamedFunction(cur)) {
+            when (cur) {
+                "pow" -> {
+                    val (left, nextIndex) = generateAST(prefix, index + 1)
+                    val (right, finalIndex) = generateAST(prefix, nextIndex)
+                    return Pair(BinOp('^', left, right), finalIndex)
+                }
+                else -> throw IllegalArgumentException("Unknown function")
             }
         }
         throw IllegalArgumentException("Unknown expression")
     }
 
-    fun prefixParser(expr: Expression): Double {
+    fun parseAST(expr: Expression): Double {
         return when (expr) {
             is NumberExpr -> expr.num
             is BinOp -> when (expr.op) {
-                '+' -> prefixParser(expr.l) + prefixParser(expr.r)
-                '-' -> prefixParser(expr.l) - prefixParser(expr.r)
-                '*' -> prefixParser(expr.l) * prefixParser(expr.r)
-                '/' -> prefixParser(expr.l) / prefixParser(expr.r)
+                '+' -> parseAST(expr.l) + parseAST(expr.r)
+                '-' -> parseAST(expr.l) - parseAST(expr.r)
+                '*' -> parseAST(expr.l) * parseAST(expr.r)
+                '/' -> parseAST(expr.l) / parseAST(expr.r)
+                '^' -> parseAST(expr.l).pow(parseAST(expr.r))
                 else -> throw IllegalArgumentException("Unknown binary operator")
             }
             is UnOp -> when (expr.op) {
-                '-' -> prefixParser(expr.expr) * -1
+                '-' -> parseAST(expr.expr) * -1
                 else -> throw IllegalArgumentException("Unknown unary operator")
             }
-            else -> throw IllegalArgumentException("Unknown expression")
         }
-
     }
 
 }
