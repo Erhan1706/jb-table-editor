@@ -1,10 +1,10 @@
 package parser
 
+import ui.Table
 import java.lang.StringBuilder
-import javax.swing.JTable
 import kotlin.math.pow
 
-class Parser(private val table: JTable) {
+class Parser(private val table: Table) {
 
     /**
      * Parses the formula of a cell and updates it so that it contains the final result. This will also recursively
@@ -12,18 +12,23 @@ class Parser(private val table: JTable) {
      */
     fun parseCell(selectedRow: Int, selectedCol: Int): Double {
         // Start by identifying any references to other cells and replacing them with their values
-        var formula: String = calculateReferences(table.model.getValueAt(selectedRow, selectedCol).toString())
-        if (formula.isEmpty()) return 0.0
+        try {
+            var formula: String = calculateReferences(table.model.getValueAt(selectedRow, selectedCol).toString())
+            if (formula.isEmpty()) return 0.0
 
-        formula = removeSpaces(formula) // Remove all whitespaces
-        formula = handleUnaryMinus(formula) // Substitute unary minus with ~ character
-        formula = preprocessNamedFunctions(formula)
-        val tokens: List<String> = infixToPrefixTokenize(formula.reversed())
-        val (ast,_) = generateAST(tokens, 0)
-        val result = parseAST(ast)
-        table.model.setValueAt(result, selectedRow, selectedCol)
-
-        return result
+            formula = removeSpaces(formula) // Remove all whitespaces
+            formula = handleUnaryMinus(formula) // Substitute unary minus with ~ character
+            formula = preprocessNamedFunctions(formula)
+            val tokens: List<String> = infixToPrefixTokenize(formula.reversed())
+            val (ast,_) = generateAST(tokens, 0)
+            val result = parseAST(ast)
+            table.model.setValueAt(result, selectedRow, selectedCol)
+            return result
+        } catch (e: Exception) {
+            table.model.setValueAt("", selectedRow, selectedCol)
+            table.label.text = "Error: Invalid formula"
+            return -1.0
+        }
     }
 
     /** Removes all whitespaces from the formula string */
@@ -103,7 +108,7 @@ class Parser(private val table: JTable) {
                 if (c == '+') continue // skip unary +, since they don't change anything
                 else if (c == '-') {
                     res.append('~')
-                    lastElement = c
+                    lastElement = '~'
                 }
             } else {
                 res.append(c)
@@ -222,7 +227,7 @@ class Parser(private val table: JTable) {
             i++
         }
         while (stack.isNotEmpty()) {
-            res.add(stack.removeLast().toString())
+            res.add(stack.removeLast())
         }
 
         println(res.reversed())

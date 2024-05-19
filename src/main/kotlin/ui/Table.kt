@@ -1,19 +1,20 @@
 package ui
 
 import parser.Parser
+import java.awt.Color
+import java.awt.Component
 import java.awt.event.ActionEvent
 import java.awt.event.KeyEvent
-import javax.swing.AbstractAction
-import javax.swing.JComponent
-import javax.swing.JTable
-import javax.swing.KeyStroke
+import javax.swing.*
 import javax.swing.table.DefaultTableCellRenderer
 import javax.swing.table.DefaultTableModel
+import javax.swing.table.TableCellRenderer
 
 
 class Table(private val rows: Int, private val columns: Int) : JTable() {
 
     private val parser: Parser
+    val label: JLabel = JLabel()
 
     init {
         val data = initializeData()
@@ -26,12 +27,22 @@ class Table(private val rows: Int, private val columns: Int) : JTable() {
         }
         setSelectionMode(0)
         setupKeyBind()
+        getTableHeader().reorderingAllowed = false
 
         parser = Parser(this)
 
         val centerRenderer = DefaultTableCellRenderer()
         centerRenderer.horizontalAlignment = DefaultTableCellRenderer.CENTER
         getColumnModel().getColumn(0).cellRenderer = centerRenderer
+    }
+
+
+    override fun prepareRenderer(renderer: TableCellRenderer,row: Int, column: Int): Component {
+        val c = super.prepareRenderer(renderer, row, column)
+        //  Alternate row color
+        if (!isRowSelected(rows)) c.background = if (row % 2 == 0) background else Color(220,220,220)
+
+        return c
     }
 
     /** Initializes the column names of the table, starting from A to Z */
@@ -64,6 +75,7 @@ class Table(private val rows: Int, private val columns: Int) : JTable() {
         getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(KeyStroke.getKeyStroke("C"), "parse")
         actionMap.put("parse", object : AbstractAction() {
             override fun actionPerformed(ae: ActionEvent) {
+                label.text = ""
                 parser.parseCell(selectedRow, selectedColumn)
             }
         })
