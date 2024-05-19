@@ -1,5 +1,9 @@
 package parser
 
+import parser.Expressions.BinOp
+import parser.Expressions.Expression
+import parser.Expressions.NumberExpr
+import parser.Expressions.UnOp
 import ui.Table
 import java.lang.StringBuilder
 import kotlin.math.*
@@ -25,7 +29,11 @@ class Parser(private val table: Table) {
             val tokens: List<String> = infixToPrefixTokenize(formula.reversed()) // Convert infix to prefix notation and tokenize
             val (ast,_) = generateAST(tokens, 0) // Generate the AST from the tokens
             val result = parseAST(ast) // Parse the AST and calculate the result
-            table.model.setValueAt(String.format("%.2f", result), selectedRow, selectedCol)
+            if  (result % 1.0 == 0.0) { // If the result doesn't have any decimal places, show it as an int
+                table.model.setValueAt(result.toInt(), selectedRow, selectedCol)
+            } else {
+                table.model.setValueAt(String.format("%.2f", result), selectedRow, selectedCol)
+            }
             return result
         } catch (e: Exception) {
             table.model.setValueAt("", selectedRow, selectedCol)
@@ -86,9 +94,24 @@ class Parser(private val table: Table) {
      * Note that the row index is 0-based while the column index is 1-based, thus A1 starts at (0, 1) and not (0,0).
      */
     fun mapCoordinatesToTableCell(coord: String): Pair<Int, Int> {
-        val row = coord.substring(1).toInt() - 1
-        val col = coord[0] - 'A' + 1
-        return Pair(row, col)
+        if (coord[1].isDigit()) {
+            val row = coord.substring(1).toInt() - 1
+            val col = coord[0] - 'A' + 1
+            return Pair(row, col)
+        } else {
+            val row = coord.substring(2).toInt() - 1
+            val col = convertColumnToIndex(coord.substring(0, 2))
+            return Pair(row, col)
+        }
+    }
+
+    /** Converts an Excel-style column label (e.g., "AA") to a one-based column index */
+    fun convertColumnToIndex(column: String): Int {
+        var index = 0
+        for (i in column.indices) {
+            index = index * 26 + (column[i] - 'A' + 1)
+        }
+        return index
     }
 
     /**
@@ -97,8 +120,8 @@ class Parser(private val table: Table) {
      * ensure that the final value is returned.
      */
     fun calculateReferences(formula: String): String  {
-        // Define the regular expression pattern to match an uppercase letter followed by one or more digits
-        val pattern = Regex("([A-Z])(\\d+)")
+        // Define the regular expression pattern to match 1 or more uppercase letter followed by one or more digits
+        val pattern = Regex("([A-Z]+)(\\d+)")
         val result = pattern.replace(formula) { coord ->
             val (row, col) = mapCoordinatesToTableCell(coord.value)
             parseCell(row, col).toString()
@@ -136,15 +159,6 @@ class Parser(private val table: Table) {
         return res.toString()
     }
 
-    private fun findNextCharIndex(formula: String, endIndex: Int, char: Char): Int {
-        var i = endIndex - 1
-        while (i >= 0) {
-            if (formula[i] == char) return i
-            i--
-        }
-        throw IllegalArgumentException("Character not found")
-    }
-
     /**
      * Preprocesses named functions in the formula string, such that they can be interpreted by the parser. The
      * named functions are reformatted so that they can resemble binary operators. For example,
@@ -168,17 +182,14 @@ class Parser(private val table: Table) {
                 if (isNamedFunction(str.toString()) && cur == '(') {
                     if (getNumArgsNamedFunctions(str.toString()) == 2) {
                         res.append(formula[i++])
-                        val end =  findNextCharIndex(formula, endIndex, ',')
-                        while (i < end) {
-                            val (_, ind) = preprocessNamedFunctions(formula, res, i, end)
-                            i = ind
+                        while (i < formula.length && formula[i] != ',') {
+                            res.append(formula[i])
+                            i++
                         }
-                        println(formula[i])
-                        i++
                         res.append(')')
-                        i = rewriteNamedFunction(res, formula, i, str.toString(), endIndex)
+                        i = rewriteNamedFunction(res, formula, i, str.toString())
                     } else if (getNumArgsNamedFunctions(str.toString()) == 1) {
-                        i = rewriteNamedFunction(res, formula, i, str.toString(), endIndex)
+                        i = rewriteNamedFunction(res, formula, i, str.toString())
                     }
                 } else throw IllegalArgumentException("Invalid format of named function")
             }
@@ -187,18 +198,17 @@ class Parser(private val table: Table) {
     }
 
     /** Helper function that rewrites named function to the correct format supported by the parser */
-    private fun rewriteNamedFunction(res: StringBuilder, formula: String, i: Int, functionName: String, endIndex: Int): Int {
+    private fun rewriteNamedFunction(res: StringBuilder, formula: String, i: Int, functionName: String): Int {
         var index = i
         res.append(functionName)
         res.append('(')
-        val end =  findNextCharIndex(formula, endIndex, ')')
-        while (index < end) {
-            val (_, ind) = preprocessNamedFunctions(formula, res, index, end)
-            index = ind
+        index++
+        while (index < formula.length && formula[index] != ')') {
+            res.append(formula[index])
+            index++
         }
-        val temp = formula[index]
         res.append(')')
-        index += 1
+        index++
         return index
     }
 

@@ -3,6 +3,9 @@ package parser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import parser.Expressions.BinOp
+import parser.Expressions.NumberExpr
+import parser.Expressions.UnOp
 import ui.Table
 import java.lang.StringBuilder
 
@@ -39,6 +42,9 @@ class ParserTest {
         assertEquals(expected, parser.mapCoordinatesToTableCell(input))
         input = "F10"
         expected = Pair(9, 6)
+        assertEquals(expected, parser.mapCoordinatesToTableCell(input))
+        input = "AA1"
+        expected = Pair(0, 27)
         assertEquals(expected, parser.mapCoordinatesToTableCell(input))
     }
 

@@ -28,6 +28,7 @@ class Table(private val rows: Int, private val columns: Int) : JTable() {
         setSelectionMode(0)
         setupKeyBind()
         getTableHeader().reorderingAllowed = false
+        label.foreground = Color.RED
 
         parser = Parser(this)
 
@@ -46,12 +47,23 @@ class Table(private val rows: Int, private val columns: Int) : JTable() {
     }
 
     /** Initializes the column names of the table, starting from A to Z */
-    private fun initializeColumnNames(): Array<Char> {
-        val columnNames = Array<Char> (columns) {' '}
-        for (i in 1 until columnNames.size) {
-            columnNames[i] = ('A'.code + i - 1).toChar()
+    private fun initializeColumnNames(): Array<String> {
+        val columnNames = Array(columns) { "" }
+        for (i in 1 until columns) {
+            columnNames[i] = getCol(i - 1)
         }
         return columnNames
+    }
+
+    private fun getCol(index: Int): String {
+        var colIndex = index
+        val columnName = StringBuilder()
+        while (colIndex >= 0) {
+            val remainder = colIndex % 26
+            columnName.append(('A' + remainder))
+            colIndex = (colIndex / 26) - 1
+        }
+        return columnName.reverse().toString()
     }
 
     /**
