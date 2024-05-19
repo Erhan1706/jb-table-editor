@@ -1,18 +1,20 @@
 package parser
 
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Test
-import javax.swing.JTable
+import ui.Table
+import java.lang.StringBuilder
 
 class ParserTest {
 
-    private val table: JTable = JTable(10, 10)
+    private val table: Table = Table(10, 10)
     private val parser:Parser = Parser(table)
 
     @Test
     fun handleUnaryOperatorsTest() {
         var expected = "1+~3"
-        var input = "1+-+3"
+        var input = "+1+-+3"
         assertEquals(expected, parser.handleUnaryMinus(input))
         expected = "~ (~3 / 2)"
         input = "- (-3 / 2)"
@@ -20,9 +22,11 @@ class ParserTest {
     }
 
     @Test
-    fun handleUnaryOperatorsTestNoUnary() {
-        val input = "(1+3)*3+2-1"
-        assertEquals(input, parser.handleUnaryMinus(input))
+    fun handleUnaryOperatorsTestInvalid() {
+        val input = "16/*8"
+        assertThrows(Exception::class.java) {
+            parser.handleUnaryMinus(input)
+        }
     }
 
     @Test
@@ -51,13 +55,23 @@ class ParserTest {
     fun preprocessNamedFunctionsTest() {
         var input = "pow(3,2)"
         var expected = "(3)pow(2)"
-        assertEquals(expected, parser.preprocessNamedFunctions(input))
+        assertEquals(expected, parser.preprocessNamedFunctions(input, StringBuilder(), 0, input.length).first)
         input = "pow(-3,2+4)"
         expected = "(-3)pow(2+4)"
-        assertEquals(expected, parser.preprocessNamedFunctions(input))
+        assertEquals(expected, parser.preprocessNamedFunctions(input, StringBuilder(), 0, input.length).first)
         input = "pow(3,2+2)/pow(2+5,3)"
         expected = "(3)pow(2+2)/(2+5)pow(3)"
-        assertEquals(expected, parser.preprocessNamedFunctions(input))
+        assertEquals(expected, parser.preprocessNamedFunctions(input, StringBuilder(), 0, input.length).first)
+    }
+
+    @Test
+    fun preprocessNamedFunctionsUnary() {
+        var input = "sqrt(2)"
+        var expected = "sqrt(2)"
+        assertEquals(expected, parser.preprocessNamedFunctions(input, StringBuilder(), 0, input.length).first)
+        input = "fact(-2*8)"
+        expected = "fact(-2*8)"
+        assertEquals(expected, parser.preprocessNamedFunctions(input, StringBuilder(), 0, input.length).first)
     }
 
     @Test

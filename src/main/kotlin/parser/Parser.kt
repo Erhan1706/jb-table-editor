@@ -2,7 +2,7 @@ package parser
 
 import ui.Table
 import java.lang.StringBuilder
-import kotlin.math.pow
+import kotlin.math.*
 
 class Parser(private val table: Table) {
 
@@ -11,18 +11,21 @@ class Parser(private val table: Table) {
      * parse and update any cells that are referenced in the formula.
      */
     fun parseCell(selectedRow: Int, selectedCol: Int): Double {
-        // Start by identifying any references to other cells and replacing them with their values
         try {
+            // Start by identifying any references to other cells and replacing them with their values
             var formula: String = calculateReferences(table.model.getValueAt(selectedRow, selectedCol).toString())
             if (formula.isEmpty()) return 0.0
 
             formula = removeSpaces(formula) // Remove all whitespaces
             formula = handleUnaryMinus(formula) // Substitute unary minus with ~ character
-            formula = preprocessNamedFunctions(formula)
-            val tokens: List<String> = infixToPrefixTokenize(formula.reversed())
-            val (ast,_) = generateAST(tokens, 0)
-            val result = parseAST(ast)
-            table.model.setValueAt(result, selectedRow, selectedCol)
+            // Preprocess named functions to a format that can be parsed
+            val (f, _) = preprocessNamedFunctions(formula, StringBuilder(), 0, formula.length)
+            println("Preprocessed formula: $f")
+            formula = f
+            val tokens: List<String> = infixToPrefixTokenize(formula.reversed()) // Convert infix to prefix notation and tokenize
+            val (ast,_) = generateAST(tokens, 0) // Generate the AST from the tokens
+            val result = parseAST(ast) // Parse the AST and calculate the result
+            table.model.setValueAt(String.format("%.2f", result), selectedRow, selectedCol)
             return result
         } catch (e: Exception) {
             table.model.setValueAt("", selectedRow, selectedCol)
@@ -38,12 +41,12 @@ class Parser(private val table: Table) {
 
     /** Checks if char is an operand supported by the parser*/
     private fun isOperand(c: Char): Boolean {
-        return setOf<Char>('+', '-', '*', '/', '~', '%').contains(c)
+        return setOf('+', '-', '*', '/', '~', '%').contains(c)
     }
 
     /** Checks if string is an operand supported by the parser*/
     private fun isOperandString(s: String): Boolean {
-        return setOf<String>("+", "-", "*", "/", "~", "%").contains(s)
+        return setOf("+", "-", "*", "/", "~", "%").contains(s)
     }
 
     /** Checks if char is a number */
@@ -62,7 +65,20 @@ class Parser(private val table: Table) {
 
     /** Checks if string is one of the supported named function */
     private fun isNamedFunction(s: String): Boolean {
-        return setOf<String>("pow", "sqrt").contains(s)
+        return setOf("pow", "sqrt", "e", "fact", "max", "min").contains(s)
+    }
+
+    /** Returns the number of arguments a named function takes */
+    private fun getNumArgsNamedFunctions(s: String): Int {
+        return when (s) {
+            "pow" -> 2
+            "sqrt" -> 1
+            "e" -> 1
+            "fact" -> 1
+            "max" -> 2
+            "min" -> 2
+            else -> 0
+        }
     }
 
     /**
@@ -76,8 +92,9 @@ class Parser(private val table: Table) {
     }
 
     /**
-     * For all cell references in the formula, replace them with their corresponding values from the table. This
-     * will call parseCell for each reference to ensure that the final value is calculated and returned.
+     * For all cell references in the formula, replace them with their corresponding values from the table. If the
+     * reference cell contains a formula that needs to be calculated, this will call parseCell for each reference to
+     * ensure that the final value is returned.
      */
     fun calculateReferences(formula: String): String  {
         // Define the regular expression pattern to match an uppercase letter followed by one or more digits
@@ -97,10 +114,11 @@ class Parser(private val table: Table) {
      */
     fun handleUnaryMinus(formula: String): String {
         var lastElement: Char = ' '
-        var res: StringBuilder = StringBuilder()
+        val res = StringBuilder()
         for (c in formula) {
+            if (res.isEmpty() && c== '+') continue // skip unary +, since they don't change anything
             // Check if first character is a minus sign
-            if (res.isEmpty() && c == '-') {
+            else if (res.isEmpty() && c == '-') {
                 res.append('~')
                 lastElement = '~'
             // Check if minus sign is preceded by an operand or an opening parenthesis
@@ -109,7 +127,7 @@ class Parser(private val table: Table) {
                 else if (c == '-') {
                     res.append('~')
                     lastElement = '~'
-                }
+                } else throw IllegalArgumentException("Two illegal operators in a row")
             } else {
                 res.append(c)
                 lastElement = c
@@ -118,45 +136,70 @@ class Parser(private val table: Table) {
         return res.toString()
     }
 
+    private fun findNextCharIndex(formula: String, endIndex: Int, char: Char): Int {
+        var i = endIndex - 1
+        while (i >= 0) {
+            if (formula[i] == char) return i
+            i--
+        }
+        throw IllegalArgumentException("Character not found")
+    }
+
     /**
      * Preprocesses named functions in the formula string, such that they can be interpreted by the parser. The
-     * named functions are reformatted so that they can  resemble binary operators. For example,
+     * named functions are reformatted so that they can resemble binary operators. For example,
      * "pow(2,3)" is transformed to "(2)pow(3)". For more examples see the test cases.
      */
-    fun preprocessNamedFunctions(formula: String): String {
-        val res = StringBuilder()
-        var i = 0
-        while (i < formula.length) {
+    fun preprocessNamedFunctions(formula: String, res: StringBuilder, curIndex: Int,  endIndex: Int): Pair<String, Int> {
+        var i = curIndex
+        while (i < endIndex) {
             var cur: Char = formula[i]
+            // Skip non-letter characters
             if (!cur.isLetter()) {
                 res.append(cur)
                 i++
-            }
-            val str = StringBuilder()
-            while (cur.isLetter()) {
-                str.append(cur)
-                cur = formula[++i]
-            }
-            if (isNamedFunction(str.toString()) && cur == '(') {
-                i++
-                res.append('(')
-                while (formula[i] != ',') {
-                    res.append(formula[i])
-                    i++
+            } else {
+                val str = StringBuilder()
+                while (cur.isLetter()) {
+                    str.append(cur)
+                    cur = formula[++i]
                 }
-                res.append(')')
-                res.append(str)
-                res.append('(')
-                i++
-                while (formula[i] != ')') {
-                    res.append(formula[i])
-                    i++
-                }
-                res.append(')')
-                i++
+                // Check if the string is a named function and is followed by an opening parenthesis
+                if (isNamedFunction(str.toString()) && cur == '(') {
+                    if (getNumArgsNamedFunctions(str.toString()) == 2) {
+                        res.append(formula[i++])
+                        val end =  findNextCharIndex(formula, endIndex, ',')
+                        while (i < end) {
+                            val (_, ind) = preprocessNamedFunctions(formula, res, i, end)
+                            i = ind
+                        }
+                        println(formula[i])
+                        i++
+                        res.append(')')
+                        i = rewriteNamedFunction(res, formula, i, str.toString(), endIndex)
+                    } else if (getNumArgsNamedFunctions(str.toString()) == 1) {
+                        i = rewriteNamedFunction(res, formula, i, str.toString(), endIndex)
+                    }
+                } else throw IllegalArgumentException("Invalid format of named function")
             }
         }
-        return res.toString()
+        return Pair(res.toString(), i)
+    }
+
+    /** Helper function that rewrites named function to the correct format supported by the parser */
+    private fun rewriteNamedFunction(res: StringBuilder, formula: String, i: Int, functionName: String, endIndex: Int): Int {
+        var index = i
+        res.append(functionName)
+        res.append('(')
+        val end =  findNextCharIndex(formula, endIndex, ')')
+        while (index < end) {
+            val (_, ind) = preprocessNamedFunctions(formula, res, index, end)
+            index = ind
+        }
+        val temp = formula[index]
+        res.append(')')
+        index += 1
+        return index
     }
 
     /**
@@ -167,23 +210,23 @@ class Parser(private val table: Table) {
     fun infixToPrefixTokenize(formula: String): List<String> {
         val res = ArrayList<String>()
         // The ~ character is used to represent the unitary - sign. Higher number -> higher priority
-        val operandsPrio: Map<String, Int> = mapOf("+" to 1, "-" to 1, "*" to 2, "/" to 2, "%" to 2,"~" to 4, "pow" to 3)
+        val operandsPrio: Map<String, Int> = mapOf("+" to 1, "-" to 1, "*" to 2, "/" to 2, "%" to 2,"~" to 4,
+            "pow" to 3, "max" to 3, "min" to 3, "sqrt" to 4, "e" to 4, "fact" to 4)
         val stack: ArrayDeque<String> = ArrayDeque()
 
         var i = 0
         while (i < formula.length) {
             val cur = formula[i]
             when {
-                cur.isWhitespace() -> {
-                    i++
-                }
+                cur.isWhitespace() -> i++
                 isNumber(cur) -> {
                     val number = StringBuilder()
+                    // Iterate for multi-digit numbers
                     while (i < formula.length && isNumber(formula[i])) {
-                        number.insert(0, formula[i])
+                        number.insert(0, formula[i]) // Insert at the beginning since number is reversed
                         i++
                     }
-                    res.add(number.toString())
+                    res.add(number.toString()) // Add the number to the result directly
                     continue
                 }
                 // Parentheses appear reversed because the input string is processed in reverse order
@@ -191,15 +234,18 @@ class Parser(private val table: Table) {
                     stack.addLast(")")
                 }
                 cur == '(' -> {
+                    // Pop operators from the stack to the result until a closing parenthesis is found
                     while (stack.last() != ")") {
                         res.add(stack.removeLast())
                     }
                     if (stack.isNotEmpty()) stack.removeLast()
                 }
                 isOperand(cur) -> {
-                    if (stack.isEmpty() || stack.last() == "(") {
+                    // If the stack is empty or the last element is a closing parenthesis, add the operand to the stack
+                    if (stack.isEmpty() || stack.last() == ")") {
                         stack.addLast(cur.toString())
                     } else {
+                        // Pop operators with higher precedence from the stack to the result
                         while (stack.isNotEmpty() &&
                             (operandsPrio[stack.last()] ?: 0) > (operandsPrio[cur.toString()] ?: 0)) {
                             res.add(stack.removeLast())
@@ -207,35 +253,38 @@ class Parser(private val table: Table) {
                         stack.addLast(cur.toString())
                     }
                 }
+                // If it's none of the above then it's a string
                 else -> {
                     val str = StringBuilder()
+                    // Iterate for multi-letter strings
                     while (i < formula.length && formula[i].isLetter()) {
                         str.append(formula[i])
                         i++
                     }
                     val strName = str.reversed().toString()
+                    // Check if the string is one of the supported named functions
                     if (isNamedFunction(strName)) {
                         val last = stack.lastOrNull()
                         if ((operandsPrio[last] ?: 0) >= (operandsPrio[strName] ?: 0)) {
                             res.add(stack.removeLast())
                         }
                         stack.addLast(strName)
-                    }
+                    } else throw IllegalArgumentException("Invalid character in formula")
                     continue
                 }
             }
             i++
         }
+        // Remove the remaining elements in the stack
         while (stack.isNotEmpty()) {
             res.add(stack.removeLast())
         }
-
         println(res.reversed())
         return res.reversed()
     }
 
     /**
-     * Generates the  Abstract Syntax Tree (AST) AST from the prefix expression. The AST represents the hierarchical
+     * Generates the Abstract Syntax Tree (AST) AST from the prefix expression. The AST represents the hierarchical
      * structure of the expression.
      * @return the root of the AST and the index of the next element in the prefix expression. The index is used to
      * correctly parse the next element in recursive calls, in case there are nested expressions.
@@ -278,11 +327,33 @@ class Parser(private val table: Table) {
                 else -> throw IllegalArgumentException("Unknown operator")
             }
         } else if (isNamedFunction(cur)) {
-            when (cur) {
+            return when (cur) {
                 "pow" -> {
                     val (left, nextIndex) = generateAST(prefix, index + 1)
                     val (right, finalIndex) = generateAST(prefix, nextIndex)
-                    return Pair(BinOp('^', left, right), finalIndex)
+                    Pair(BinOp('^', left, right), finalIndex)
+                }
+                "sqrt" -> {
+                    val (operand, nextIndex) = generateAST(prefix, index + 1)
+                    Pair(UnOp('√', operand), nextIndex)
+                }
+                "e" -> {
+                    val (operand, nextIndex) = generateAST(prefix, index + 1)
+                    Pair(UnOp('e', operand), nextIndex)
+                }
+                "fact" -> {
+                    val (operand, nextIndex) = generateAST(prefix, index + 1)
+                    Pair(UnOp('!', operand), nextIndex)
+                }
+                "max" -> {
+                    val (left, nextIndex) = generateAST(prefix, index + 1)
+                    val (right, finalIndex) = generateAST(prefix, nextIndex)
+                    Pair(BinOp('m', left, right), finalIndex)
+                }
+                "min" -> {
+                    val (left, nextIndex) = generateAST(prefix, index + 1)
+                    val (right, finalIndex) = generateAST(prefix, nextIndex)
+                    Pair(BinOp('n', left, right), finalIndex)
                 }
                 else -> throw IllegalArgumentException("Unknown function")
             }
@@ -303,13 +374,24 @@ class Parser(private val table: Table) {
                 '/' -> parseAST(expr.l) / parseAST(expr.r)
                 '%' -> parseAST(expr.l) % parseAST(expr.r)
                 '^' -> parseAST(expr.l).pow(parseAST(expr.r))
+                'm' -> max(parseAST(expr.l), parseAST(expr.r))
+                'n' -> min(parseAST(expr.l), parseAST(expr.r))
                 else -> throw IllegalArgumentException("Unknown binary operator")
             }
             is UnOp -> when (expr.op) {
                 '-' -> parseAST(expr.expr) * -1
+                '√' -> sqrt(parseAST(expr.expr))
+                'e' -> E.pow(parseAST(expr.expr))
+                '!' -> factorial(parseAST(expr.expr))
                 else -> throw IllegalArgumentException("Unknown unary operator")
             }
+            else -> throw IllegalArgumentException("Unknown expression")
         }
+    }
+
+    private fun factorial(n: Double): Double {
+        if (n < 0) throw IllegalArgumentException("Factorial is not defined for negative numbers")
+        return if (n == 0.0 || n == 1.0) 1.0 else n * factorial(n - 1)
     }
 
 }

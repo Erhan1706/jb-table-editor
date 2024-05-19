@@ -6,4 +6,7 @@ class NumberExpr(val num: Double): Expression() {
         if (other !is NumberExpr) return false
         return num == other.num
     }
+    override fun hashCode(): Int {
+        return num.hashCode()
+    }
 }
