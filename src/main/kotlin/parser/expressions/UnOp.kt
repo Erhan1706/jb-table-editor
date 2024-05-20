@@ -1,4 +1,4 @@
-package parser.Expressions
+package parser.expressions
 
 class UnOp(val op: Char, val expr: Expression): Expression() {
     override fun equals(other: Any?): Boolean {

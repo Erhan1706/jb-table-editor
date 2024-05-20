@@ -1,4 +1,4 @@
-package parser.Expressions
+package parser.expressions
 
 class BinOp(val op: Char, val l: Expression, val r: Expression): Expression() {
     override fun equals(other: Any?): Boolean {

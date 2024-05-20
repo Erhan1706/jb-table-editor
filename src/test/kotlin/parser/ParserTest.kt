@@ -3,9 +3,9 @@ package parser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
-import parser.Expressions.BinOp
-import parser.Expressions.NumberExpr
-import parser.Expressions.UnOp
+import parser.expressions.BinOp
+import parser.expressions.NumberExpr
+import parser.expressions.UnOp
 import ui.Table
 import java.lang.StringBuilder
 

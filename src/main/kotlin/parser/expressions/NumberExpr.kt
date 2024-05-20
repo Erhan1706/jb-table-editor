@@ -1,4 +1,4 @@
-package parser.Expressions
+package parser.expressions
 
 class NumberExpr(val num: Double): Expression() {
     override fun equals(other: Any?): Boolean {

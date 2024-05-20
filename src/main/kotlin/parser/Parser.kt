@@ -1,9 +1,9 @@
 package parser
 
-import parser.Expressions.BinOp
-import parser.Expressions.Expression
-import parser.Expressions.NumberExpr
-import parser.Expressions.UnOp
+import parser.expressions.BinOp
+import parser.expressions.Expression
+import parser.expressions.NumberExpr
+import parser.expressions.UnOp
 import ui.Table
 import java.lang.StringBuilder
 import kotlin.math.*
@@ -220,7 +220,7 @@ class Parser(private val table: Table) {
     fun infixToPrefixTokenize(formula: String): List<String> {
         val res = ArrayList<String>()
         // The ~ character is used to represent the unitary - sign. Higher number -> higher priority
-        val operandsPrio: Map<String, Int> = mapOf("+" to 1, "-" to 1, "*" to 2, "/" to 2, "%" to 2,"~" to 4,
+        val operatorsPrio: Map<String, Int> = mapOf("+" to 1, "-" to 1, "*" to 2, "/" to 2, "%" to 2,"~" to 4,
             "pow" to 3, "max" to 3, "min" to 3, "sqrt" to 4, "e" to 4, "fact" to 4)
         val stack: ArrayDeque<String> = ArrayDeque()
 
@@ -257,7 +257,7 @@ class Parser(private val table: Table) {
                     } else {
                         // Pop operators with higher precedence from the stack to the result
                         while (stack.isNotEmpty() &&
-                            (operandsPrio[stack.last()] ?: 0) > (operandsPrio[cur.toString()] ?: 0)) {
+                            (operatorsPrio[stack.last()] ?: 0) > (operatorsPrio[cur.toString()] ?: 0)) {
                             res.add(stack.removeLast())
                         }
                         stack.addLast(cur.toString())
@@ -275,7 +275,7 @@ class Parser(private val table: Table) {
                     // Check if the string is one of the supported named functions
                     if (isNamedFunction(strName)) {
                         val last = stack.lastOrNull()
-                        if ((operandsPrio[last] ?: 0) >= (operandsPrio[strName] ?: 0)) {
+                        if ((operatorsPrio[last] ?: 0) >= (operatorsPrio[strName] ?: 0)) {
                             res.add(stack.removeLast())
                         }
                         stack.addLast(strName)
