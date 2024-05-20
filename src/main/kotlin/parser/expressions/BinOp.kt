@@ -1,5 +1,6 @@
 package parser.expressions
 
+/** Represents a binary operation and named functions with 2 parameters */
 class BinOp(val op: Char, val l: Expression, val r: Expression): Expression() {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -1,5 +1,6 @@
 package parser.expressions
 
+/** Represents a unary operation and named functions with 1 parameter */
 class UnOp(val op: Char, val expr: Expression): Expression() {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

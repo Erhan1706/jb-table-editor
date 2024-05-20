@@ -141,7 +141,10 @@ class ParserTest {
     @Test
     fun parseCellTestSimple() {
         table.setValueAt("1+3", 2, 3)
-        val expected = 4.0
+        var expected = 4.0
+        assertEquals(expected, parser.parseCell(2,3), 0.01)
+        table.setValueAt("(((1-3)))", 2, 3)
+        expected = -2.0
         assertEquals(expected, parser.parseCell(2,3), 0.01)
     }
 
@@ -159,8 +162,13 @@ class ParserTest {
         table.setValueAt("16/8", 0, 1)
         table.setValueAt("8-5-1", 1, 2)
         table.setValueAt("pow(-2, A1 - 3) * (42 + B2)", 2, 3)
-        val expected = -22.0
+        var expected = -22.0
         assertEquals(expected, parser.parseCell(2,3), 0.01)
+        table.setValueAt("sqrt(64) + fact(2)", 0, 1)
+        table.setValueAt("max(A1, 2)", 1, 2)
+        table.setValueAt("min(3, B2) % 5", 5, 6)
+        expected = 3.0
+        assertEquals(expected, parser.parseCell(5,6), 0.01)
     }
 
 

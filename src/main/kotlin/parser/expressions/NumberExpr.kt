@@ -1,5 +1,6 @@
 package parser.expressions
 
+/** Represents a numeric value */
 class NumberExpr(val num: Double): Expression() {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

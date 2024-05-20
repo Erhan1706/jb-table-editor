@@ -55,6 +55,10 @@ class Table(private val rows: Int, private val columns: Int) : JTable() {
         return columnNames
     }
 
+    /**
+     * Returns the column name based on the index. For indexes after 26,
+     * the columns will have an excel-style format (AA, AB, ...)
+     * */
     private fun getCol(index: Int): String {
         var colIndex = index
         val columnName = StringBuilder()
