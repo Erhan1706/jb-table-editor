@@ -23,10 +23,8 @@ class Parser(private val table: Table) {
             formula = removeSpaces(formula) // Remove all whitespaces
             formula = handleUnaryMinus(formula) // Substitute unary minus with ~ character
             // Preprocess named functions to a format that can be parsed
-            val (f, _) = preprocessNamedFunctions(formula, StringBuilder(), 0, formula.length)
-            println("Preprocessed formula: $f")
-            formula = f
-            val tokens: List<String> = infixToPrefixTokenize(formula.reversed()) // Convert infix to prefix notation and tokenize
+            val processedFormula = preprocessNamedFunctions(formula, StringBuilder(), 0, formula.length)
+            val tokens: List<String> = infixToPrefixTokenize(processedFormula.reversed()) // Convert infix to prefix notation and tokenize
             val (ast,_) = generateAST(tokens, 0) // Generate the AST from the tokens
             val result = parseAST(ast) // Parse the AST and calculate the result
             if  (result % 1.0 == 0.0) { // If the result doesn't have any decimal places, show it as an int
@@ -106,7 +104,7 @@ class Parser(private val table: Table) {
     }
 
     /** Converts an Excel-style column label (e.g., "AA") to a one-based column index */
-    fun convertColumnToIndex(column: String): Int {
+    private fun convertColumnToIndex(column: String): Int {
         var index = 0
         for (i in column.indices) {
             index = index * 26 + (column[i] - 'A' + 1)
@@ -164,7 +162,7 @@ class Parser(private val table: Table) {
      * named functions are reformatted so that they can resemble binary operators. For example,
      * "pow(2,3)" is transformed to "(2)pow(3)". For more examples see the test cases.
      */
-    fun preprocessNamedFunctions(formula: String, res: StringBuilder, curIndex: Int,  endIndex: Int): Pair<String, Int> {
+    fun preprocessNamedFunctions(formula: String, res: StringBuilder, curIndex: Int,  endIndex: Int): String {
         var i = curIndex
         while (i < endIndex) {
             var cur: Char = formula[i]
@@ -194,7 +192,7 @@ class Parser(private val table: Table) {
                 } else throw IllegalArgumentException("Invalid format of named function")
             }
         }
-        return Pair(res.toString(), i)
+        return res.toString()
     }
 
     /** Helper function that rewrites named function to the correct format supported by the parser */
@@ -294,7 +292,7 @@ class Parser(private val table: Table) {
     }
 
     /**
-     * Generates the Abstract Syntax Tree (AST) AST from the prefix expression. The AST represents the hierarchical
+     * Generates the Abstract Syntax Tree (AST) from the prefix expression. The AST represents the hierarchical
      * structure of the expression.
      * @return the root of the AST and the index of the next element in the prefix expression. The index is used to
      * correctly parse the next element in recursive calls, in case there are nested expressions.

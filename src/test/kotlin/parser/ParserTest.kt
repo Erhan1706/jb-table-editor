@@ -61,23 +61,23 @@ class ParserTest {
     fun preprocessNamedFunctionsTest() {
         var input = "pow(3,2)"
         var expected = "(3)pow(2)"
-        assertEquals(expected, parser.preprocessNamedFunctions(input, StringBuilder(), 0, input.length).first)
+        assertEquals(expected, parser.preprocessNamedFunctions(input, StringBuilder(), 0, input.length))
         input = "pow(-3,2+4)"
         expected = "(-3)pow(2+4)"
-        assertEquals(expected, parser.preprocessNamedFunctions(input, StringBuilder(), 0, input.length).first)
+        assertEquals(expected, parser.preprocessNamedFunctions(input, StringBuilder(), 0, input.length))
         input = "pow(3,2+2)/pow(2+5,3)"
         expected = "(3)pow(2+2)/(2+5)pow(3)"
-        assertEquals(expected, parser.preprocessNamedFunctions(input, StringBuilder(), 0, input.length).first)
+        assertEquals(expected, parser.preprocessNamedFunctions(input, StringBuilder(), 0, input.length))
     }
 
     @Test
     fun preprocessNamedFunctionsUnary() {
         var input = "sqrt(2)"
         var expected = "sqrt(2)"
-        assertEquals(expected, parser.preprocessNamedFunctions(input, StringBuilder(), 0, input.length).first)
+        assertEquals(expected, parser.preprocessNamedFunctions(input, StringBuilder(), 0, input.length))
         input = "fact(-2*8)"
         expected = "fact(-2*8)"
-        assertEquals(expected, parser.preprocessNamedFunctions(input, StringBuilder(), 0, input.length).first)
+        assertEquals(expected, parser.preprocessNamedFunctions(input, StringBuilder(), 0, input.length))
     }
 
     @Test
