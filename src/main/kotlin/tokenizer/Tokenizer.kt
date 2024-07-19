@@ -6,12 +6,13 @@ data class NumberToken(val num: Int) : Token
 object OpenBracketToken: Token
 object CloseBracketToken : Token
 object CommaToken: Token
-data class OperandToken(val symbol: Char) : Token {
+data class OperatorToken(val symbol: Char) : Token {
     companion object {
-        val MINUS = OperandToken('-')
-        val PLUS = OperandToken('+')
-        val DIVIDE = OperandToken('/')
-        val MULT = OperandToken('*')
+        val MINUS = OperatorToken('-')
+        val PLUS = OperatorToken('+')
+        val DIVIDE = OperatorToken('/')
+        val MULT = OperatorToken('*')
+        val UNARY = OperatorToken('u')
     }
 }
 data class CellReferenceToken(val ref: String) : Token
@@ -67,7 +68,7 @@ class Tokenizer {
             c.isDigit() -> {
                 NumberToken(parseSequence(c, Character::isDigit, String::toInt))
             }
-            isOperand(c) -> OperandToken(c)
+            isOperand(c) -> OperatorToken(c)
             c.isLetter() -> {
                 var str = ""
                 str += c
