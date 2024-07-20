@@ -2,6 +2,7 @@ package tests
 
 import tokenizer.*
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.pow
 
 class Parser {
@@ -37,6 +38,11 @@ class Parser {
         val res: NumberToken = when (f.func) {
             "pow"-> NumberToken(l.num.toDouble().pow(r.num.toDouble()).toInt())
             "max"-> NumberToken(max(l.num, r.num))
+            "min"-> NumberToken(min(l.num, r.num))
+            "fact" -> {
+                numStack.add(l)
+                NumberToken(factorial(r.num))
+            }
             else -> throw IllegalArgumentException("Unknown function: ${f.func}")
         }
         numStack.add(res)
@@ -116,6 +122,11 @@ class Parser {
 
         if (operatorStack.isNotEmpty() && operatorStack.last() is FunctionToken)
             outputStack.add(operatorStack.removeLast())
+    }
+
+    private fun factorial(n: Int): Int {
+        if (n < 0) throw IllegalArgumentException("Factorial is not defined for negative numbers")
+        return if (n == 0 || n == 1) 1 else n * factorial(n - 1)
     }
 
 }
