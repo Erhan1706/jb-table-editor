@@ -1,4 +1,4 @@
-package parser.expressions
+package tests.expressions
 
 /** Represents a unary operation and named functions with 1 parameter */
 class UnOp(val op: Char, val expr: Expression): Expression() {

@@ -1,11 +1,7 @@
-package parser
+package tests
 
 import org.junit.Assert
 import org.junit.Test
-import org.junit.jupiter.api.BeforeAll
-import tokenizer.NumberToken
-import tokenizer.OperatorToken
-import tokenizer.Token
 import tokenizer.Tokenizer
 
 class ParserTest {
@@ -53,6 +49,27 @@ class ParserTest {
     fun complexExpression() {
         val input = tk.tokenize("10 - (-3 * (4 - 7))")
         Assert.assertEquals(1, pr.parse(input))
+    }
+
+    @Test
+    fun functionTest() {
+        val input = tk.tokenize("pow((2+1),3)")
+        Assert.assertEquals(27, pr.parse(input))
+    }
+
+    @Test
+    fun nestedFunctionTest() {
+        val input = tk.tokenize("max(pow(6-4,4),3)")
+        Assert.assertEquals(16, pr.parse(input))
+    }
+
+    @Test
+    fun associativityTest() {
+        var input = tk.tokenize("8-5-1")
+        Assert.assertEquals(2, pr.parse(input))
+        input = tk.tokenize("16/4/2")
+        Assert.assertEquals(2, pr.parse(input))
+
     }
 
 

@@ -1,4 +1,4 @@
-package parser;
+package tests;
 
 import org.junit.Assert.assertEquals
 import org.junit.Test;

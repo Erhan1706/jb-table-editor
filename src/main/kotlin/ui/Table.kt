@@ -1,6 +1,6 @@
 package ui
 
-import parser.ParserOld
+import tests.CellCalculator
 import java.awt.Color
 import java.awt.Component
 import java.awt.event.ActionEvent
@@ -13,7 +13,7 @@ import javax.swing.table.TableCellRenderer
 
 class Table(private val rows: Int, private val columns: Int) : JTable() {
 
-    private val parserOld: ParserOld
+    private val cellCalculator: CellCalculator
     val label: JLabel = JLabel()
 
     init {
@@ -30,7 +30,7 @@ class Table(private val rows: Int, private val columns: Int) : JTable() {
         getTableHeader().reorderingAllowed = false
         label.foreground = Color.RED
 
-        parserOld = ParserOld(this)
+        cellCalculator = CellCalculator(this)
 
         val centerRenderer = DefaultTableCellRenderer()
         centerRenderer.horizontalAlignment = DefaultTableCellRenderer.CENTER
@@ -92,7 +92,7 @@ class Table(private val rows: Int, private val columns: Int) : JTable() {
         actionMap.put("parse", object : AbstractAction() {
             override fun actionPerformed(ae: ActionEvent) {
                 label.text = ""
-                parserOld.parseCell(selectedRow, selectedColumn)
+                cellCalculator.evaluateCell(selectedRow, selectedColumn)
             }
         })
     }

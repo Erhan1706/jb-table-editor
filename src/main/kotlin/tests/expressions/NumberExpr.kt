@@ -1,4 +1,4 @@
-package parser.expressions
+package tests.expressions
 
 /** Represents a numeric value */
 class NumberExpr(val num: Double): Expression() {
